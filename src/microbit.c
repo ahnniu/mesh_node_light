@@ -104,7 +104,7 @@ void light_on(void)
 			 { 1, 1, 1, 1, 1 },
 			 { 1, 1, 1, 1, 1 });
 
-	mb_display_image(disp, MB_DISPLAY_MODE_DEFAULT, K_SECONDS(10),
+	mb_display_image(disp, MB_DISPLAY_MODE_DEFAULT, K_FOREVER,
 			 &arrow, 1);
 }
 
@@ -117,6 +117,6 @@ void light_off(void)
 			 { 0, 0, 0, 0, 0 },
 			 { 0, 0, 0, 0, 0 });
 
-	mb_display_image(disp, MB_DISPLAY_MODE_DEFAULT, K_SECONDS(10),
+	mb_display_image(disp, MB_DISPLAY_MODE_DEFAULT, K_FOREVER,
 			 &arrow, 1);
 }

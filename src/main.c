@@ -14,9 +14,14 @@
 #include <bluetooth/mesh.h>
 
 #include "board.h"
+#include "onoff_srv.h"
+#include "main.h"
+
+
+u16_t primary_addr = BT_MESH_ADDR_UNASSIGNED;
 
 static struct bt_mesh_cfg_srv cfg_srv = {
-	.relay = BT_MESH_RELAY_DISABLED,
+	.relay = BT_MESH_RELAY_ENABLED,
 	.beacon = BT_MESH_BEACON_ENABLED,
 #if defined(CONFIG_BT_MESH_FRIEND)
 	.frnd = BT_MESH_FRIEND_ENABLED,
@@ -39,112 +44,24 @@ static struct bt_mesh_health_srv health_srv = {
 };
 
 BT_MESH_HEALTH_PUB_DEFINE(health_pub, 0);
+BT_MESH_MODEL_PUB_DEFINE(gen_onoff_pub_cli, NULL, 2 + 2);
 
-static struct bt_mesh_model_pub gen_level_pub;
-static struct bt_mesh_model_pub gen_onoff_pub;
-
-static void gen_onoff_get(struct bt_mesh_model *model,
-			  struct bt_mesh_msg_ctx *ctx,
-			  struct net_buf_simple *buf)
-{
-}
-
-static void gen_onoff_set(struct bt_mesh_model *model,
-			  struct bt_mesh_msg_ctx *ctx,
-			  struct net_buf_simple *buf)
-{
-}
-
-static void gen_onoff_set_unack(struct bt_mesh_model *model,
-				struct bt_mesh_msg_ctx *ctx,
-				struct net_buf_simple *buf)
-{
-	u8_t buflen = buf->len;
-	u8_t target_onoff_state = net_buf_simple_pull_u8(buf);
-	u8_t tid = net_buf_simple_pull_u8(buf);
-
-	printk("Recived new state: %d\n", target_onoff_state);
-	if(target_onoff_state)
-		light_on();
-	else
-		light_off();
-
-}
-
-static const struct bt_mesh_model_op gen_onoff_op[] = {
-	{ BT_MESH_MODEL_OP_2(0x82, 0x01), 0, gen_onoff_get },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x02), 2, gen_onoff_set },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x03), 2, gen_onoff_set_unack },
-	BT_MESH_MODEL_OP_END,
-};
-
-static void gen_level_get(struct bt_mesh_model *model,
-			  struct bt_mesh_msg_ctx *ctx,
-			  struct net_buf_simple *buf)
-{
-}
-
-static void gen_level_set(struct bt_mesh_model *model,
-			  struct bt_mesh_msg_ctx *ctx,
-			  struct net_buf_simple *buf)
-{
-}
-
-static void gen_level_set_unack(struct bt_mesh_model *model,
-				struct bt_mesh_msg_ctx *ctx,
-				struct net_buf_simple *buf)
-{
-}
-
-static void gen_delta_set(struct bt_mesh_model *model,
-			  struct bt_mesh_msg_ctx *ctx,
-			  struct net_buf_simple *buf)
-{
-}
-
-static void gen_delta_set_unack(struct bt_mesh_model *model,
-				struct bt_mesh_msg_ctx *ctx,
-				struct net_buf_simple *buf)
-{
-}
-
-static void gen_move_set(struct bt_mesh_model *model,
-			 struct bt_mesh_msg_ctx *ctx,
-			 struct net_buf_simple *buf)
-{
-}
-
-static void gen_move_set_unack(struct bt_mesh_model *model,
-			       struct bt_mesh_msg_ctx *ctx,
-			       struct net_buf_simple *buf)
-{
-}
-
-static const struct bt_mesh_model_op gen_level_op[] = {
-	{ BT_MESH_MODEL_OP_2(0x82, 0x05), 0, gen_level_get },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x06), 3, gen_level_set },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x07), 3, gen_level_set_unack },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x09), 5, gen_delta_set },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x0a), 5, gen_delta_set_unack },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x0b), 3, gen_move_set },
-	{ BT_MESH_MODEL_OP_2(0x82, 0x0c), 3, gen_move_set_unack },
-	BT_MESH_MODEL_OP_END,
-};
-
-static struct bt_mesh_model root_models[] = {
+struct bt_mesh_model root_models[] = {
 	BT_MESH_MODEL_CFG_SRV(&cfg_srv),
 	BT_MESH_MODEL_HEALTH_SRV(&health_srv, &health_pub),
-	BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_ONOFF_SRV, gen_onoff_op,
-		      &gen_onoff_pub, NULL),
-	// BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_LEVEL_SRV, gen_level_op,
-	// 	      &gen_level_pub, NULL),
+	BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_ONOFF_SRV, gen_onoff_srv_op,
+		&gen_onoff_pub_cli, &onoff_srv_state),
 };
 
-static struct bt_mesh_elem elements[] = {
+struct bt_mesh_model *mod_onoff_cli[] = {
+	&root_models[2],
+};
+
+struct bt_mesh_elem elements[] = {
 	BT_MESH_ELEM(0, root_models, BT_MESH_MODEL_NONE),
 };
 
-static const struct bt_mesh_comp comp = {
+const struct bt_mesh_comp comp = {
 	.cid = BT_COMP_ID_LF,
 	.elem = elements,
 	.elem_count = ARRAY_SIZE(elements),
@@ -161,6 +78,7 @@ static int output_number(bt_mesh_output_action_t action, u32_t number)
 
 static void prov_complete(u16_t net_idx, u16_t addr)
 {
+	primary_addr = addr;
 	board_prov_complete();
 }
 
@@ -169,7 +87,7 @@ static void prov_reset(void)
 	bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
 }
 
-static const uint8_t dev_uuid[16] = { 0xdd, 0x00 };
+static const uint8_t dev_uuid[16] = { 0xdd, 0xd0 };
 
 static const struct bt_mesh_prov prov = {
 	.uuid = dev_uuid,
@@ -212,6 +130,8 @@ void main(void)
 	int err;
 
 	printk("Initializing...\n");
+
+	onoff_srv_init();
 
 	/* Initialize the Bluetooth Subsystem */
 	err = bt_enable(bt_ready);

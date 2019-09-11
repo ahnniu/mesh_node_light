@@ -80,6 +80,7 @@ static void prov_complete(u16_t net_idx, u16_t addr)
 {
 	primary_addr = addr;
 	board_prov_complete();
+	bt_mesh_proxy_identity_enable();
 }
 
 static void prov_reset(void)

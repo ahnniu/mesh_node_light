@@ -13,6 +13,7 @@ struct button {
 
 extern struct button btn_a;
 extern struct onoff_state onoff_srv_state;
+extern struct k_work btn_b_work;
 
 extern const struct bt_mesh_model_op gen_onoff_srv_op[];
 

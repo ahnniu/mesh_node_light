@@ -104,6 +104,8 @@ struct onoff_state onoff_srv_state = {
 	.current = 0
 };
 
+struct k_work btn_b_work;
+
 static void button_a_pressed_worker(struct k_work *work)
 {
 	u8_t new_state;
@@ -127,8 +129,17 @@ static void button_a_pressed_worker(struct k_work *work)
 
 }
 
+static void button_b_pressed_worker(struct k_work *work)
+{
+	if(primary_addr) {
+		bt_mesh_proxy_identity_enable();
+		blink_a_led();
+	}
+}
+
 void onoff_srv_init()
 {
   /* Initialize button worker task*/
 	k_work_init(&btn_a.work, button_a_pressed_worker);
+	k_work_init(&btn_b_work, button_b_pressed_worker);
 }

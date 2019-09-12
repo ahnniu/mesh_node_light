@@ -16,6 +16,8 @@ void board_init(void);
 void light_on(void);
 
 void light_off(void);
+
+void blink_a_led(void);
 #else
 static inline void board_output_number(bt_mesh_output_action_t action,
 				       u32_t number)

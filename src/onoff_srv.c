@@ -74,6 +74,7 @@ static void gen_onoff_srv_handler_set_unack(struct bt_mesh_model *model,
 	}
 
 	if(target_onoff_state != srv_state->current) {
+		srv_state->current = target_onoff_state;
 		gen_onoff_srv_pub_status(model);
 	}
 }
